@@ -2,18 +2,41 @@ const puppeteer = require('puppeteer');
 
 (async () => {
     const browser = await puppeteer.launch({
-        headless: false,           // Allow browser to show
-        defaultViewport: null,     // optional
-        userDataDir: "./tmp"
+        headless: false,
+        userDataDir: "./chrome-profile"
     });
-    const page = await browser.newPage();
-    await page.goto('https://www.dominos.com/');
-
-    const orderHandles = await page.$$('sv-flex sv-grow sv-items-center sv-gap-medium');
     
-    await page.click(
-        "#main-content > section > header > div > div.sh-hidden.sh-p-large.sh-pizza-box-shaped-header-notch.md\\:sh-block > div > p > a:nth-child(1)"
-    );
+    const page = await browser.newPage();
 
-    console.log("Clicked delivery!");
+    await page.goto("https://www.dominos.com/", {
+        waitUntil: "networkidle2"
+    });
+
+    await page.waitForSelector("a");
+
+    const isLoggedOut = await page.evaluate(() => {
+        const links = Array.from(document.querySelectorAll("a"));
+        return links.some(a => 
+        (a.textContent || "").trim().toLowerCase() === "Sign In"
+        );
+    });
+
+    if(isLoggedOut){
+        console.log("Not Logged In.");
+        console.log("Please Log in. Browser will stay open.");
+        return;
+    }
+
+    const links = await page.evaluate(() => {
+    const anchorTags = Array.from(document.querySelectorAll("a"));
+
+    return anchorTags
+        .map(a => a.textContent.trim())
+        .filter(text => text.length > 0);
+});
+
+    console.log("Found links:");
+    console.log(links.slice(0, 10));
+    console.log(isLoggedOut);
+    
 })();
